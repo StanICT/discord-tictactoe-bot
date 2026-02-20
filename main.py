@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import os
 import re
 import traceback
+import asyncio
 
 import discord
 from discord import app_commands
@@ -58,7 +59,7 @@ class Client(discord.Client):
         return f"[{mark}] <@{user.id}>"
 
     def turn_mark(self, turn: int) -> str:
-        return f"{self.players[turn][0]}"
+        return f"{self.players[turn][1]}"
 
 
     def reset(self):
@@ -201,7 +202,10 @@ class Client(discord.Client):
 
 
     async def display_winner(self, channel: discord.channel.TextChannel):
-        await self.send_message(channel, f"**Winner: {self.turn_mark(WINNER)}**")
+        if WINNER == -1:
+            await self.send_message(channel, f"**DRAW**")
+        else:
+            await self.send_message(channel, f"**Winner: <@{self.players[WINNER][0].id}> [{self.turn_mark(WINNER)}]**")
         
     async def start_game(self, channel: discord.channel.TextChannel, players: tuple[discord.User, discord.User]):
         global TURN, SIZE
@@ -232,15 +236,23 @@ class TicTacToe(app_commands.Group):
     @app_commands.describe(opponent="The opposing player to play against with")
     async def start(self, interaction: discord.Interaction, opponent: discord.Member):
         if client.started:
-            await interaction.response.send_message("A game of TicTacToe is already on session")
+            await interaction.response.send_message("A game of TicTacToe is already on session",ephemeral=True)
             return
         
+        if interaction.user.id == opponent.id:
+            await interaction.response.send_message("You cannot play against yourself",ephemeral=True)
+            return
+        
+        opponent = await interaction.guild.fetch_member(opponent.id)
+        await asyncio.sleep(1)
+        opponent = interaction.guild.get_member(opponent.id)
+
         if opponent.status != discord.Status.online and opponent.status != discord.Status.idle:
-            await interaction.response.send_message(f"User {opponent.display_name} does not seem to be active at the moment")
+            await interaction.response.send_message(f"User {opponent.display_name} does not seem to be active at the moment",ephemeral=True)
             return
         
-        await interaction.response.send_message("Started a game of TicTacToe")
-        await client.start_game(interaction.channel, interaction.user, opponent)
+        await interaction.response.send_message(f"Started a game of TicTacToe with <@{opponent.id}>")
+        await client.start_game(interaction.channel, (interaction.user, opponent))
 
         return 
 
@@ -250,18 +262,23 @@ class TicTacToe(app_commands.Group):
         channel = interaction.channel
 
         if not client.started:
-            await interaction.response.send_message(f"You are currently not part of a game of TicTacToe.")
+            await interaction.response.send_message(f"You are currently not part of a game of TicTacToe.",ephemeral=True)
+            return
+
+        member, _ = client.players[TURN]
+        if interaction.user.id != member.id:
+            await interaction.response.send_message(f"Player {member.display_name}'s turn",ephemeral=True)
             return
 
         try:
             # Range checker to avoid invalid cell numbers
             if cell < 1 or cell > (SIZE ** 2):
-                await interaction.response.send_message(f"Invalid cell number: {cell}")
+                await interaction.response.send_message(f"Invalid cell number: {cell}",ephemeral=True)
                 return
 
             # Check if the cell already has a mark
             if (client.has_mark(cell)):
-                await interaction.response.send_message(f"Cell number {cell} already has a mark!")
+                await interaction.response.send_message(f"Cell number {cell} already has a mark!",ephemeral=True)
                 return
 
             await interaction.response.send_message(f"Mark {client.turn_mark(TURN)} has been placed on cell {cell}")
@@ -274,12 +291,13 @@ class TicTacToe(app_commands.Group):
             if not client.has_empty_cells() or WINNER != -1:
                 client.started = False
                 await client.display_winner(channel)
+                client.reset()
                 return
             
             await client.update_turn(channel)
 
         except Exception as exc:
-            await client.send_message(channel, f"Invalid cell number!\n{exc}")
+            await interaction.response.send_message(channel, f"Invalid cell number!\n{exc}",ephemeral=True)
             traceback.print_exc()
             return
             
@@ -291,6 +309,25 @@ for guild_id in GUILDS:
 async def on_ready():
     for guild_id in GUILDS:
         await tree.sync(guild=discord.Object(id=guild_id))
+
+    # for guild in client.guilds:
+    #     members = await guild.chunk()
+    #     for mem in members:
+    #         status = str(mem.status)  # 'online', 'offline', 'idle', 'dnd'
+    
+    #         # mem.activities or mem._client_status gives device info
+    #         client_status = mem.raw_status if hasattr(mem, "raw_status") else mem._client_status
+    #         devices = []
+    #         if client_status is not None:
+    #             if getattr(client_status, "desktop_status", None) not in (None, "offline"):
+    #                 devices.append("Desktop")
+    #             if getattr(client_status, "mobile_status", None) not in (None, "offline"):
+    #                 devices.append("Mobile")
+    #             if getattr(client_status, "web_status", None) not in (None, "offline"):
+    #                 devices.append("Web")
+            
+    #         device_str = ", ".join(devices) if devices else "No active device"
+    #         print(f"{mem.name}: {status}, Devices: {device_str}")
 
     print(f"Logged on as {client.user}!")
 
