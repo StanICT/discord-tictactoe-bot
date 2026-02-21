@@ -1,1 +1,1 @@
-watchmedo auto-restart --patterns="*.py" --recursive -- python main.py
+watchmedo auto-restart --patterns="src/*.py" --recursive -- python src/main.py
