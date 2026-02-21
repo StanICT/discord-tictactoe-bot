@@ -73,18 +73,6 @@ class Client(discord.Client):
         self.turn = 0 # Reset turn to whatever turn you want
         self.board = self.create_board() # Re-create the board
 
-
-    async def send_message(self, channel: discord.channel.TextChannel, message: str) -> discord.Message:
-        return await channel.send(message)
-
-    async def print_board(self, channel: discord.channel.TextChannel):
-        await self.send_message(channel, self.board_to_str())
-
-
-    async def display_board(self):
-        pass
-
-        
     def horizontal_check(self, turn: int):
         assert(turn >= 0 or turn < len(self.players)) # Turn is dependent on the number of self.players
 
@@ -204,12 +192,9 @@ class Client(discord.Client):
 
 
     async def display_winner(self, channel: discord.channel.TextChannel):
-        if self.winner == -1:
-            await self.send_message(channel, f"**DRAW**")
-        else:
-            await self.send_message(channel, f"**Winner: <@{self.players[self.winner][0].id}> [{self.turn_mark(self.winner)}]**")
+        await channel.send(f"**DRAW**" if self.winner == -1 else f"**Winner: <@{self.players[self.winner][0].id}> [{self.turn_mark(self.winner)}]**")
         
-    async def start_game(self, channel: discord.channel.TextChannel, grid_size: int, players: tuple[discord.User, discord.User]):
+    async def start_game(self, grid_size: int, players: tuple[discord.User, discord.User]):
         self.started = True
         self.size = grid_size
         self.board = self.create_board()
@@ -225,6 +210,7 @@ class Client(discord.Client):
                 if interaction.user.id != member.id:
                     await interaction.response.defer(ephemeral=True)
                     await interaction.followup.send(f"Player {member.display_name}'s turn",ephemeral=True)
+                    
                     return
                 
                 await interaction.response.defer()

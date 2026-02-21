@@ -40,7 +40,7 @@ class TicTacToe(app_commands.Group):
             await interaction.response.send_message(f"User {opponent.display_name} does not seem to be active at the moment",ephemeral=True)
             return
         
-        await client.start_game(interaction.channel, grid_size, (interaction.user, opponent))
+        await client.start_game(grid_size, (interaction.user, opponent))
         await interaction.response.send_message(f"Started a game of TicTacToe with <@{opponent.id}>\n{client.turn_display(client.turn)}'s Turn", view=client.view)
 
         return
@@ -71,48 +71,48 @@ class TicTacToe(app_commands.Group):
         await client.display_winner(interaction.channel)
         client.reset()
 
-    @app_commands.command(name="cell", description="Places your specified mark on the provided cell")
-    @app_commands.describe(cell="The cell number to place the mark")
-    async def cell(self, interaction: discord.Interaction, cell: int):
-        channel = interaction.channel
+    # @app_commands.command(name="cell", description="Places your specified mark on the provided cell")
+    # @app_commands.describe(cell="The cell number to place the mark")
+    # async def cell(self, interaction: discord.Interaction, cell: int):
+    #     channel = interaction.channel
 
-        if not client.started:
-            await interaction.response.send_message(f"You are currently not part of a game of TicTacToe.",ephemeral=True)
-            return
+    #     if not client.started:
+    #         await interaction.response.send_message(f"You are currently not part of a game of TicTacToe.",ephemeral=True)
+    #         return
 
-        member, _ = client.players[client.turn]
-        if interaction.user.id != member.id:
-            await interaction.response.send_message(f"Player {member.display_name}'s turn",ephemeral=True)
-            return
+    #     member, _ = client.players[client.turn]
+    #     if interaction.user.id != member.id:
+    #         await interaction.response.send_message(f"Player {member.display_name}'s turn",ephemeral=True)
+    #         return
 
-        try:
-            # Range checker to avoid invalid cell numbers
-            if cell < 1 or cell > (self.size ** 2):
-                await interaction.response.send_message(f"Invalid cell number: {cell}",ephemeral=True)
-                return
+    #     try:
+    #         # Range checker to avoid invalid cell numbers
+    #         if cell < 1 or cell > (self.size ** 2):
+    #             await interaction.response.send_message(f"Invalid cell number: {cell}",ephemeral=True)
+    #             return
 
-            # Check if the cell already has a mark
-            if (client.has_mark(cell)):
-                await interaction.response.send_message(f"Cell number {cell} already has a mark!",ephemeral=True)
-                return
+    #         # Check if the cell already has a mark
+    #         if (client.has_mark(cell)):
+    #             await interaction.response.send_message(f"Cell number {cell} already has a mark!",ephemeral=True)
+    #             return
 
-            await interaction.response.send_message(f"Mark {client.turn_mark(client.turn)} has been placed on cell {cell}")
+    #         await interaction.response.send_message(f"Mark {client.turn_mark(client.turn)} has been placed on cell {cell}")
 
-            client.set_cell(cell, client.turn)
-            client.check_winner(client.turn) # Check winner immediately
+    #         client.set_cell(cell, client.turn)
+    #         client.check_winner(client.turn) # Check winner immediately
 
-            await client.print_board(channel)
+    #         await client.print_board(channel)
 
-            if not client.has_empty_cells() or WINNER != -1:
-                await client.display_winner(channel)
-                client.reset()
-                return
+    #         if not client.has_empty_cells() or WINNER != -1:
+    #             await client.display_winner(channel)
+    #             client.reset()
+    #             return
             
-            await client.update_turn(channel)
+    #         await client.update_turn(channel)
 
-        except Exception as exc:
-            await interaction.response.send_message(channel, f"Invalid cell number!\n{exc}",ephemeral=True)
-            return
+    #     except Exception as exc:
+    #         await interaction.response.send_message(channel, f"Invalid cell number!\n{exc}",ephemeral=True)
+    #         return
         
             
 for guild_id in client.guild_ids:
